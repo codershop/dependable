@@ -4,8 +4,16 @@ assert = require 'assert'
 fs = require 'fs'
 os = require 'os'
 path = require 'path'
+existsSync = fs.existsSync ? path.existsSync
+dir = path.join os.tmpDir(), "testinject"
 
 describe 'inject', ->
+  beforeEach (done) ->
+    exists = existsSync dir
+    if exists
+      fs.rmdir dir
+    done()
+
   it 'should create a container', ->
     deps = container()
 
@@ -245,8 +253,6 @@ describe 'inject', ->
 
     it 'should let you register a whole directory', (done) ->
 
-      dir = path.join os.tmpDir(), "testinject"
-
       afile = path.join dir, "A.js"
       acode = """
         module.exports = function() { return 'a' }
@@ -268,6 +274,30 @@ describe 'inject', ->
             deps.load dir
             b = deps.get 'B'
             assert.equal b, 'ab'
+            done()
+
+    it 'should let you register the directory name as an object of the modules loaded', (done) ->
+      afile = path.join dir, "A.js"
+      acode = """
+        module.exports = function() { return 'a' }
+      """
+
+      bfile = path.join dir, "B.js"
+      bcode = """
+        module.exports = function(A) { return A + 'b' }
+      """
+
+      fs.mkdir dir, (err) ->
+        # ignore err, if it already exists
+        fs.writeFile afile, acode, (err) ->
+          assert.ifError (err)
+          fs.writeFile bfile, bcode, (err) ->
+            assert.ifError (err)
+
+            deps = container()
+            deps.load dir
+            moduleDir = deps.get 'testinject'
+            assert.equal moduleDir.B, 'ab'
             done()
 
     it 'should let you load a file without an extension'
