@@ -38,14 +38,22 @@ exports.container = ->
     name = path.basename(module).replace(/\-(\w)/g, (match, letter) -> letter.toUpperCase())
 
     register name, require(module)
+    return name
 
   loaddir = (dir) ->
+    name = dir.replace(/\.\w+$/, "")
+    module = {}
+    name = path.basename(name).replace(/\-(\w)/g, (match, letter) -> letter.toUpperCase())
     filenames = fs.readdirSync dir
     files = filenames.map (file) -> path.join dir, file
     for file in files
       continue unless file.match /\.(js|coffee)$/
       stats = fs.statSync file
-      if stats.isFile() then loadfile file
+      if stats.isFile()
+        fileName = loadfile file
+        module[fileName] = get fileName
+
+    register name, module
 
   toFactory = (func) ->
     if typeof func is "function"
